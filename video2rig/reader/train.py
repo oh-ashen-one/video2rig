@@ -69,6 +69,10 @@ def load_items(pr, kps, renders, height=None, cr=None):
                    lab['prop_names'] if 'prop_names' in lab.files else ())
     vpath = render_file(renders, 'visible.npz')                         # video2rig.reader.visible: hidden joints
     seen = np.load(vpath)['vis'] if vpath.exists() else None
+    if seen is not None and seen.shape[-1] != len(kps):
+        raise SystemExit(f'{vpath}: made for {seen.shape[-1]} keypoints, the creature now has {len(kps)} (creature.json '
+                         f'changed its limbs?): python -m video2rig.reader.visible {pr.root} first, or prepare '
+                         'without --keep')
     items = []
     for v, rec in enumerate(cams['views']):
         size = tuple(int(s) for s in lab['sizes'][v])

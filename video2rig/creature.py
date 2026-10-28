@@ -106,6 +106,8 @@ class Creature:
         self.legs = self.standing_legs()
         from .twins import resolve
         resolve(self, log=print)            # creature.json "twins" (else the names say which limbs are twins)
+        from .limbs import check_twins
+        check_twins(self, log=print)        # creature.json "limbs" and "twins" agree
         self.textures = load_textures(rig_dir, self.data.get('materials', []))
         self._clip = {}
 
@@ -425,6 +427,8 @@ class Creature:
                     j = kids[j][0]
                 if len(kids[j]) <= 1 and sum(bool(skinned[b]) for b in chain) >= 2:
                     chains.append(chain)
+        from .limbs import merge
+        chains = merge(self, chains)                  # creature.json "limbs" in place of the chains they overlap
         return chains if as_list else {b for ch in chains for b in ch}
 
     def axis_roles(self):
@@ -454,7 +458,12 @@ class Creature:
         X0 = self.rig.skin(self.p0(None), self.mesh['coords'], self.idx, self.wts)
         h = X0 @ self.up - self.floor
         out = set()
+        from .limbs import standing
         for chain in self.limb_chains(as_list=True):
+            given = standing(self, chain)                 # creature.json "limbs": "standing" true / false
+            if given is not None:
+                out |= set(chain) if given else set()
+                continue
             mine = np.isin(self.idx[:, 0], chain[-2:]) & (self.wts[:, 0] > .5)
             if mine.any() and h[mine].min() <= .04 * self.height:
                 out |= set(chain)

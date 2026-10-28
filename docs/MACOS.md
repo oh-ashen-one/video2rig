@@ -94,8 +94,12 @@ The rig comes from Tripo's auto-rig, and its names do not mean what the tool's n
   position: shoulder, upper arm, forearm, then the branches by where they lie mirrored (`bone_9`/`bone_14`,
   `1_Left_Limb_1`/`0_Left_Limb_2`); `0_Left_Limb_3` stays unpaired on the right side.
 - Only the neck is a limb chain by the skeleton's shape (the legs and wings branch at their ends, and the spine bones
-  nest), so `standing_legs` finds no legs: foot locking and the leg-only fit steps do not act on this rig yet. `twins`
-  gives the twin tests their chains but does not change leg detection.
+  nest), so the tool found no standing legs: no foot lock, no steps. Fixed by the `limbs` field (docs/CONFIG.md): the
+  four legs are named down to their paw bones (`bone_9`, `bone_14`, `1_Right_Limb_4`, `0_Right_Limb_4`, the bones that
+  carry most of each paw's skin) and stand; the wings (root > wrist > tip) are free limbs. `python -m video2rig.limbs
+  <project>` prints them. The front paw bones point down into the floor (Tripo), so the fit's flat-foot term skips
+  them; the foot lock still pins them. The right hind toe's tip lies 0.027 above the floor, just over the flat-foot
+  test's 5% of the height, so that foot gets the lock but not the flat-foot term either.
 - `Head_0..3`, `bone_36`, `bone_37` carry no skin weight (a copy of a wing chain): `fit_bones: auto` leaves them out
   of the fit; their keypoints are never "seen" (no skin of their own), so the reader learns them as "not here".
 - No foot or toe names: `facing` must be given.
@@ -115,9 +119,24 @@ The rig comes from Tripo's auto-rig, and its names do not mean what the tool's n
   "tripo::0_Right_Limb_2": "back"
  },
  "twins": [["bone_11", "bone_6"], ["tripo::0_Right_Limb_0", "tripo::1_Right_Limb_0"],
-           ["VeyrWingPosZRoot", "VeyrWingNegZRoot"]]
+           ["VeyrWingPosZRoot", "VeyrWingNegZRoot"]],
+ "limbs": {
+  "front_l": {"chain": ["bone_6", "bone_7", "tripo::1_Left_Limb_0", "bone_9"], "foot": "bone_9", "standing": true},
+  "front_r": {"chain": ["bone_11", "tripo::0_Left_Limb_0", "tripo::0_Left_Limb_1", "bone_14"], "foot": "bone_14", "standing": true},
+  "hind_l": {"chain": ["tripo::1_Right_Limb_0", "tripo::1_Right_Limb_1", "tripo::1_Right_Limb_2", "tripo::1_Right_Limb_3", "tripo::1_Right_Limb_4"], "foot": "tripo::1_Right_Limb_4", "standing": true},
+  "hind_r": {"chain": ["tripo::0_Right_Limb_0", "tripo::0_Right_Limb_1", "tripo::0_Right_Limb_2", "tripo::0_Right_Limb_3", "tripo::0_Right_Limb_4"], "foot": "tripo::0_Right_Limb_4", "standing": true},
+  "wing_l": {"chain": ["VeyrWingNegZRoot", "VeyrWingNegZWrist", "VeyrWingNegZTip"], "standing": false},
+  "wing_r": {"chain": ["VeyrWingPosZRoot", "VeyrWingPosZWrist", "VeyrWingPosZTip"], "standing": false}
+ }
 }
 ```
+
+`limbs`, unlike `twins`, changes the keypoints: the new limbs' end bones whose skin spreads get side points (paws,
+wing tips): 78 keypoints instead of 64. The reader trained before it (64 keypoints) still reads and fits: reading and
+the fit take the keypoint list stored in `reader.pt`, never the creature's. But the next reader trained gets 78, and
+`--keep` on the old renders needs the hidden-joint check made again first
+(`python -m video2rig.reader.visible <project>`; train.py now stops with that message instead of misreading
+`visible.npz`). The joint ranges did not change (0 of 129 channels).
 
 (`twins` was added after the reader's training started; it does not change the reader: the keypoints are the same
 64, checked against `reader-300.pt`, and the training loss never asks for a twin. It changes the reading's fit, and
