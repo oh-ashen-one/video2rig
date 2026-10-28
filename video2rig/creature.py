@@ -104,6 +104,8 @@ class Creature:
         self.role = self.axis_roles()
         self.hinge = self.find_hinges()
         self.legs = self.standing_legs()
+        from .twins import resolve
+        resolve(self, log=print)            # creature.json "twins" (else the names say which limbs are twins)
         self.textures = load_textures(rig_dir, self.data.get('materials', []))
         self._clip = {}
 
@@ -390,6 +392,15 @@ class Creature:
         for k, pr in enumerate(rig.props):
             out['prop:' + pr['name']] = [rig.nb + k]
         return out
+
+    def twin_chains(self):
+        """limb_chains(as_list=True) for the twin tests; with creature.json "twins", the twin chains it names take
+        the place of the chains they overlap (video2rig/twins.py)."""
+        chains = self.limb_chains(as_list=True)
+        if not getattr(self, 'twins', None):
+            return chains
+        mine = {j for lc, rc in self.twins['chains'] for j in lc + rc}
+        return [c for c in chains if not set(c) & mine] + [c for lc, rc in self.twins['chains'] for c in (lc, rc)]
 
     def limb_chains(self, as_list=False):
         """Limbs by the skeleton's shape, for rigs whose bone names say nothing: a chain of bones that leaves a hub

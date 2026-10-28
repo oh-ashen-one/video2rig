@@ -243,7 +243,7 @@ def fix_twins(cr, clip, uv, conf, kps, log=print, s=SETTINGS):
     lateral = np.cross(cr.up, cr.facing)
     side = int(np.argmax([abs((v['cam'].fwd @ v['cam'].Ma) @ lateral) for v in views]))
     rig = cr.rig
-    chains = cr.limb_chains(as_list=True)                               # limbs by the skeleton's shape
+    chains = cr.twin_chains()                                           # limbs by the skeleton's shape (or "twins")
     first = {rig.names[ch[0]]: ci for ci, ch in enumerate(chains)}
     chain_of = {rig.names[j]: ci for ci, ch in enumerate(chains) for j in ch}
     pairs = {}
@@ -674,7 +674,7 @@ def pick_panels(cr, clip, uv, conf, kps, s=SETTINGS, log=print):
     H = A @ np.linalg.pinv(A) - np.eye(len(A))
     labels = [k[0] for k in kps]
     rig = cr.rig
-    chains = cr.limb_chains(as_list=True)
+    chains = cr.twin_chains()
     if len(chains) < 2:
         return conf, hit
     H0 = rig.bone_points(cr.p0(None))[0]
@@ -933,8 +933,8 @@ def hidden_points(cr, clip, P, kps, uv=None, scale=.5):
     # is far: the twin roots' depth in the start pose, their gap at least half the distance between them
     far = []
     H0 = rig.bone_points(cr.p0(None))[0]
-    roots = {rig.names[ch[0]]: ch[0] for ch in cr.limb_chains(as_list=True)}
-    for ch in cr.limb_chains(as_list=True):
+    roots = {rig.names[ch[0]]: ch[0] for ch in cr.twin_chains()}
+    for ch in cr.twin_chains():
         side = side_of(rig.names[ch[0]])
         if side is None:
             continue

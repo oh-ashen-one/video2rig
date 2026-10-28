@@ -41,7 +41,7 @@ def axis_rot(axis, angle):
 def free_limbs(cr):
     """The limbs the creature does not stand on (arms, wings), as chains of bones, hub side first."""
     rig = cr.rig
-    return [ch for ch in cr.limb_chains(as_list=True)
+    return [ch for ch in cr.twin_chains()
             if side_of(rig.names[ch[0]]) is not None and not set(ch) & cr.legs]
 
 

@@ -14,6 +14,7 @@ reader fit has settings of its own (below).
  "facing": "-Y",
  "fit_bones": "auto",
  "hinges": "auto",
+ "twins": [["Shoulder_A", "Shoulder_B"]],
  "joints": {"LeftShoulder": {"range": 0.6, "prior": 40}},
  "dense_bones": "auto",
  "seed_dense_px": 3,
@@ -35,6 +36,7 @@ reader fit has settings of its own (below).
 | `facing` | from the feet | which way the creature faces (`+X -X +Y -Y`, world); needed only if it has no feet bones |
 | `fit_bones` | `auto` | bones the fit moves: every bone with real skin weight and its parents; fingers, eyes, jaw and end bones keep their start pose. Or a list of names |
 | `hinges` | `auto` | knees and elbows by name (Mixamo `LeftLeg`/`LeftForeArm`, Rigify `shin`/`forearm`, Unreal `calf`/`lowerarm`...) bend one way only; or `{"Shin.L": "back", "Elbow.R": "front"}` |
+| `twins` | from the names | twin limbs for a rig whose names carry no `.L`/`.R`, `_L`/`_R`, `Left`/`Right` (or carry them wrongly: a Tripo rig's `0_Left_Limb`/`1_Left_Limb` are its two front legs): a list of bone pairs, each the same bone on both sides, in any order (the creature's left is measured on the start pose). Give the chain roots: both chains are walked down together, children paired one to one, and where a chain branches by where the branches lie mirrored across the body; a bone with no partner (a toe only one side has) stays on its side unpaired and is logged. When set it replaces the names everywhere the tool asks for a side or a twin: the reader fit's left / right check, the far-limb and behind-the-twin tests, the training poses that bring twin limb ends together. `python -m video2rig.twins <project>` prints the pairs it will use |
 | `joints.<bone>.range` | 2.8 rad, twist 1.2 | how far a joint may turn from the start pose (radians), or `[lo, hi]` |
 | `joints.<bone>.prior` | 2-60 | how strongly the joint stays near the start pose when the video does not say (twist, collarbones, spine, toes get more) |
 | `dense_bones` | limbs by name | (older road) parts that get dense tracking points and lighter smoothing (arms, legs, hands, feet, wings); props always. Bones named otherwise (femur, tibia, L1...): chains that leave a bone with three or more children (a pelvis, an insect's body) |

@@ -20,8 +20,30 @@ SIDE_SPAN = .6       # a bone whose skin spreads across its axis by at least thi
 SIDE_REACH = .22     # and each side reaches at least this share of the length from the axis
 
 
+_EXPLICIT = None     # creature.json "twins" (video2rig/twins.py): ({bone: 'L'|'R'}, {bone: twin bone}), else names
+
+
+def set_twins(side=None, twin=None):
+    """Answer side_of / twin_label from explicit twins (video2rig.twins.resolve) instead of the names; None: names."""
+    global _EXPLICIT
+    _EXPLICIT = None if side is None else (dict(side), dict(twin or {}))
+
+
+def _explicit_bone(label):
+    """The bone an explicit-twins label belongs to (the bone itself, or bone + '.tip' / '.sidea1'...) and the rest."""
+    side = _EXPLICIT[0]
+    if label in side:
+        return label, ''
+    bone = max((b for b in side if label.startswith(b + '.')), key=len, default=None)
+    return (bone, label[len(bone):]) if bone else (None, '')
+
+
 def twin_label(label):
     """The label on the other side: .L/.R, _L/_R, Left/Right (Mixamo), or None."""
+    if _EXPLICIT is not None:
+        bone, rest = _explicit_bone(label)
+        tw = _EXPLICIT[1].get(bone)
+        return tw + rest if tw else None
     for a, b in TWINS:
         for x, y in ((a, b), (b, a)):
             if x in label:
@@ -31,6 +53,8 @@ def twin_label(label):
 
 def side_of(label):
     """'L', 'R' or None."""
+    if _EXPLICIT is not None:
+        return _EXPLICIT[0].get(_explicit_bone(label)[0])
     for a, b in TWINS:
         if a in label:
             return 'L'

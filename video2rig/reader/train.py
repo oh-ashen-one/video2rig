@@ -284,7 +284,7 @@ def twin_limbs(cr, kps):
     from . import side_of, twin_label
     rig = cr.rig
     labels = [k[0] for k in kps]
-    chains = cr.limb_chains(as_list=True)
+    chains = cr.twin_chains()
     chain_of = {j: ci for ci, ch in enumerate(chains) for j in ch}
     limbs = {}
     for k, lb in enumerate(labels):

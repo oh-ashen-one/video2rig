@@ -84,11 +84,18 @@ The rig comes from Tripo's auto-rig, and its names do not mean what the tool's n
 
 - `0_Left_Limb_*` / `1_Left_Limb_*` are the two FRONT legs (the -Y and +Y side), `0_Right_Limb_*` / `1_Right_Limb_*`
   the two HIND legs. The tool's side rule reads `_L` in `_Limb`, so every limb counts as "left" and no twin pairs are
-  found: the left / right check (`fix_twins`) does nothing for this rig. Harmless for training; before fitting real
-  clips the bones should get twin names (a renamed copy of the rig, `.L`/`.R`) or the tool a twins setting.
+  found: the left / right check (`fix_twins`) does nothing for this rig. Fixed by the `twins` field (docs/CONFIG.md):
+  creature.json names the chain roots of the front legs, hind legs and wings, and `python -m video2rig.twins <project>`
+  prints the 15 pairs it walks from them (`0_Left_Limb_3` has no partner and is logged). Without `twins` the tool
+  pairs by names, as upstream.
 - The front legs have different chains: +Y `bone_6 > bone_7 > 1_Left_Limb_0 > {bone_9, 1_Left_Limb_1}`, -Y
   `bone_11 > 0_Left_Limb_0 > 0_Left_Limb_1 > {bone_14, 0_Left_Limb_2 > 0_Left_Limb_3}`. Nothing in the reader needs
-  them symmetric (every bone's head is its own keypoint); the hinges are named per side.
+  them symmetric (every bone's head is its own keypoint); the hinges are named per side. `twins` pairs them by
+  position: shoulder, upper arm, forearm, then the branches by where they lie mirrored (`bone_9`/`bone_14`,
+  `1_Left_Limb_1`/`0_Left_Limb_2`); `0_Left_Limb_3` stays unpaired on the right side.
+- Only the neck is a limb chain by the skeleton's shape (the legs and wings branch at their ends, and the spine bones
+  nest), so `standing_legs` finds no legs: foot locking and the leg-only fit steps do not act on this rig yet. `twins`
+  gives the twin tests their chains but does not change leg detection.
 - `Head_0..3`, `bone_36`, `bone_37` carry no skin weight (a copy of a wing chain): `fit_bones: auto` leaves them out
   of the fit; their keypoints are never "seen" (no skin of their own), so the reader learns them as "not here".
 - No foot or toe names: `facing` must be given.
@@ -106,9 +113,15 @@ The rig comes from Tripo's auto-rig, and its names do not mean what the tool's n
   "tripo::0_Left_Limb_1": "front",
   "tripo::1_Right_Limb_2": "back",
   "tripo::0_Right_Limb_2": "back"
- }
+ },
+ "twins": [["bone_11", "bone_6"], ["tripo::0_Right_Limb_0", "tripo::1_Right_Limb_0"],
+           ["VeyrWingPosZRoot", "VeyrWingNegZRoot"]]
 }
 ```
+
+(`twins` was added after the reader's training started; it does not change the reader: the keypoints are the same
+64, checked against `reader-300.pt`, and the training loss never asks for a twin. It changes the reading's fit, and
+the random poses a reader trained from now on would get: twin paws and wing tips brought together in some.)
 
 Start frame: the default front | side framing cut the dragon's head and tail out of the side panel (it is twice as
 long as it is tall). Rendered with
