@@ -18,10 +18,11 @@ from ..common import TOOL, Project, write_json
 from .net import SIZE
 
 DEFAULT_BLENDER = r'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe'
+MAC_BLENDER = '/Applications/Blender.app/Contents/MacOS/Blender'
 
 
 def find_blender(given):
-    for c in (given, os.environ.get('V2R_BLENDER'), DEFAULT_BLENDER, shutil.which('blender')):
+    for c in (given, os.environ.get('V2R_BLENDER'), DEFAULT_BLENDER, MAC_BLENDER, shutil.which('blender')):
         if c and Path(c).exists():
             return str(c)
     raise SystemExit('Blender not found: pass --blender or set V2R_BLENDER')

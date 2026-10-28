@@ -26,7 +26,7 @@ import torch.nn.functional as F  # noqa: E402
 from tapnet.torch import tapir_model  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from video2rig.device import pick  # noqa: E402
+from video2rig.device import area_resize, pick  # noqa: E402
 
 
 def run(model, video, queries, dev):
@@ -74,7 +74,7 @@ def main():
         try:
             video = torch.from_numpy(frames).to(dev)                      # uint8 on the device, then [-1, 1]
             if size != side:
-                video = F.interpolate(video.permute(0, 3, 1, 2).float(), size=(size, size), mode='area').permute(0, 2, 3, 1)
+                video = area_resize(video.permute(0, 3, 1, 2).float(), size=(size, size)).permute(0, 2, 3, 1)
             video = video.half() / 127.5 - 1 if dev.type == 'cuda' else video.float() / 127.5 - 1
             q = queries0.copy()
             q[:, 1:] = (q[:, 1:] + .5) * k - .5                              # pixel centres at integers

@@ -114,3 +114,12 @@ def synchronize(dev):
         torch.cuda.synchronize()
     elif dev.type == 'mps':
         torch.mps.synchronize()
+
+
+def area_resize(x, **kw):
+    """F.interpolate(x, mode='area', ...): on mps through the processor, as MPS's adaptive average pool refuses sizes
+    that do not divide evenly (pytorch/pytorch#96056); elsewhere unchanged."""
+    import torch.nn.functional as F
+    if x.device.type == 'mps':
+        return F.interpolate(x.cpu(), mode='area', **kw).to(x.device)
+    return F.interpolate(x, mode='area', **kw)

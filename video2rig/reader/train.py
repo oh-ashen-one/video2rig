@@ -24,7 +24,7 @@ import torch.nn.functional as F
 
 from ..common import Project, write_json
 from ..creature import Creature
-from ..device import autocast, describe, pick
+from ..device import area_resize, autocast, describe, pick
 from . import end_pairs, is_offaxis, keypoints, points, project_ortho, render_keypoints
 from .net import SIZE, Reader, count_params, decode, gaussians, letterbox, normalise, sample_maps
 
@@ -214,7 +214,7 @@ def augment(img, uv, bg, rng, extra=(), maps=None):
             xb = F.conv2d(F.pad(xb, (L // 2, (L - 1) // 2, L // 2, (L - 1) // 2), mode='replicate'), k, groups=3)
         if rng.random() < .3:
             f = rng.uniform(.5, .8)
-            xb = F.interpolate(F.interpolate(xb, scale_factor=f, mode='area'), size=(SIZE, SIZE), mode='bilinear',
+            xb = F.interpolate(area_resize(xb, scale_factor=f), size=(SIZE, SIZE), mode='bilinear',
                                align_corners=False)
         out[b:b + 1] = xb
     x = out + torch.randn_like(out) * torch.empty(B, 1, 1, 1, device=dev).uniform_(0, .025)
