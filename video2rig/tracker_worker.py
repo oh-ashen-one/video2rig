@@ -25,6 +25,9 @@ import torch  # noqa: E402
 import torch.nn.functional as F  # noqa: E402
 from tapnet.torch import tapir_model  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from video2rig.device import pick  # noqa: E402
+
 
 def run(model, video, queries, dev):
     """model.forward() in three steps: the video's feature grids once, then the queries in chunks (the refinement holds
@@ -49,7 +52,7 @@ def run(model, video, queries, dev):
 def main():
     job = np.load(sys.argv[1])
     torch.set_grad_enabled(False)
-    dev = torch.device('cuda' if GPU and torch.cuda.is_available() else 'cpu')
+    dev = pick() if GPU else torch.device('cpu')                     # cuda > mps > cpu (V2R_DEVICE overrides)
     if dev.type == 'cuda':
         total = torch.cuda.get_device_properties(0).total_memory / 2 ** 30
         cap = float(os.environ.get('V2R_GPU_MEM_GB', 0)) or max(.6 * total, total - 1.2)
