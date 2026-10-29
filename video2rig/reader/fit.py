@@ -1955,7 +1955,10 @@ def lock_feet(cr, clip, x, uv, conf, kps, lo, hi, fps, s=SETTINGS, log=print):
         target = np.zeros((T, 2, 3))
         for a, b in runs:
             tgt = np.median(ends[a:b + 1], axis=0)
-            tgt += (rest - tgt @ up)[:, None] * up[None]                # on the floor, at its resting height
+            # on the floor, at its resting height: rest is measured from the floor, tgt @ up from the origin (the old
+            # line dropped the floor; harmless at floor 0, but the Brute's floor is -0.61 m, so every pinned foot
+            # was sent 0.61 m up, the leg folded to its joint limits trying to reach it: 2026-10-29)
+            tgt += (rest + floor - tgt @ up)[:, None] * up[None]
             for t in range(max(0, a - ease), min(T, b + ease + 1)):
                 wt = 1.0 if a <= t <= b else 1 - (a - t if t < a else t - b) / (ease + 1)
                 if wt > w[t]:
