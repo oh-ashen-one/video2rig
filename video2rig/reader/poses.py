@@ -141,6 +141,7 @@ def roamer(cr, coords, idx, wts):
                     return p
         p[:3] += near
         return p
+    place.inside = inside if cams else None
     return place
 
 
@@ -169,15 +170,30 @@ def sample(cr, n, seed=0, log=print):
         sd = {'bend': .5 * min(reach, 1.6), 'twist': .3 * min(reach, 1.2), 'side': .4 * min(reach, 1.2)}[role]
         chans.append((c, role, sd))
     params = np.zeros((n, rig.n))
+    # an airborne creature (creature.json "air": {...}): more poses lifted off the floor, up to jump_max body heights; part of the
+    # poses start from a second rig export's start pose (alt_rig, e.g. the standing pose of a hovering creature's project) so the
+    # reader sees both the hover and the stance; every lift is lowered until the body is inside every panel of the start frame.
+    # Without the key nothing changes (30% of the poses lifted by up to .3 of the height).
+    air = cr.cfg.get('air') or {}
+    jump_share, jump_max, alt_share = float(air.get('jump_share', .3)), float(air.get('jump_max', .3)), float(air.get('alt_share', 0.0))
+    p_alt = None
+    if air.get('alt_rig'):
+        from ..rig import Rig
+        d2 = json.loads((Path(air['alt_rig']) / 'rig.json').read_text(encoding='utf-8'))
+        fitted = list(dict.fromkeys(rig.names[j] for j, _ in rig.channels))
+        p_alt = Rig(d2, fitted, rig.names[rig.root]).start_params()
+        assert len(p_alt) == len(p0), 'alt_rig: another channel layout'
+        log(f'air: {alt_share:.0%} of the poses start from the alt_rig start pose; lifts up to {jump_max} body heights in {jump_share:.0%}')
     reach = reacher(cr, lo, hi, coords, idx, wts)
     place = roamer(cr, coords, idx, wts)
     for i in range(n):
         calm = rng.random() < .3                      # a third near the stance: walks and idles are common
         k = .4 if calm else 1.0
-        p = p0.copy()
+        base = p_alt if (p_alt is not None and rng.random() < alt_share) else p0
+        p = base.copy()
         for c, role, sd in chans:
-            v = rng.uniform(lo[c], hi[c]) if role == 'hinge' else p0[c] + rng.normal(0.0, sd)
-            p[c] = np.clip(p0[c] + k * (v - p0[c]), lo[c], hi[c])
+            v = rng.uniform(lo[c], hi[c]) if role == 'hinge' else base[c] + rng.normal(0.0, sd)
+            p[c] = np.clip(base[c] + k * (v - base[c]), lo[c], hi[c])
         p = reach(p, rng)
         # the whole body: turned about its centre (yaw round, pitch as in a jump or a dive, a little roll)
         G, P, _ = rig.fk(p)
@@ -203,9 +219,16 @@ def sample(cr, n, seed=0, log=print):
         p[:3] += cen + Q @ (P[j] - cen) - P[j]
         # on the floor (or up to a third of its height in the air), shifted a little round its place
         X = rig.skin(p, coords, idx, wts)
-        jump = 0.0 if rng.random() < .7 else rng.uniform(0, .3) * cr.height
+        jump = 0.0 if rng.random() >= jump_share else rng.uniform(0, jump_max) * cr.height
         p[:3] += up * (cr.floor - (X @ up).min() + jump)
         p = place(p, rng)
+        if place.inside is not None and jump > 0:
+            X = rig.skin(p, coords, idx, wts)
+            for _ in range(12):              # a lift that leaves the frame is lowered, never under the floor
+                if place.inside(X) or (X @ up).min() - .1 * cr.height < cr.floor:
+                    break
+                p[:3] -= up * .1 * cr.height
+                X = X - up * .1 * cr.height
         place_props(cr, p, rng)
         params[i] = p
         if (i + 1) % 500 == 0:
