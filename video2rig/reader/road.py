@@ -121,7 +121,13 @@ def fit_reading(project, clip, cfg, uv, conf, kps, view_names, s=None, log=print
 
 def run(project, clip, cfg, tag='', log=print, cpu=False):
     uv, conf, kps, names = read_clip(project, clip, cpu=cpu, tag=tag, log=log)
-    res = fit_reading(project, clip, cfg, uv, conf, kps, names, log=log)
+    # `video2rig run --set KEY=VALUE` (cfg['solve']) also reaches the reader fit for keys it knows (steps=false: a walk drawn on
+    # the spot stays on the spot, for a game that moves the body itself)
+    from .fit import SETTINGS
+    over = {k: v for k, v in (cfg.get('solve') or {}).items() if k in SETTINGS}
+    if over:
+        log(f'reader fit settings from --set: {over}')
+    res = fit_reading(project, clip, cfg, uv, conf, kps, names, log=log, s=dict(SETTINGS, **over) if over else None)
     cr, P = res['creature'], res['params']
     cr.save(clip, P, tag, {'reader': True})
     write_json(project.work(clip) / f'fit{tag}-report.json', res['report'])
